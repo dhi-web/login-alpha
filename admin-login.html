@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --border: #2a2e37;
+    --text: #eef0f3;
+    --muted: #8a8f9a;
+    --accent: #e0995b;
+    --accent-hover: #cf8a4e;
+    --error: #ef5b5b;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 24px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 380px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 20px;
+    padding: 3px 10px;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0 0 24px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin: 16px 0 6px;
+  }
+
+  input {
+    width: 100%;
+    padding: 10px 12px;
+    background: #0f1218;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.95rem;
+    outline: none;
+  }
+
+  input:focus { border-color: var(--accent); }
+
+  button.submit {
+    width: 100%;
+    margin-top: 24px;
+    padding: 11px 0;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  button.submit:hover { background: var(--accent-hover); }
+  button.submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .message {
+    margin-top: 16px;
+    font-size: 0.85rem;
+    text-align: center;
+    min-height: 1.2em;
+  }
+
+  .message.error { color: var(--error); }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <span class="badge">Admin</span>
+  <h1>Admin sign in</h1>
+  <p class="subtitle">This login is for administrators only</p>
+
+  <form id="admin-form">
+    <label for="email">Email</label>
+    <input type="email" id="email" required autocomplete="email" placeholder="admin@example.com">
+
+    <label for="password">Password</label>
+    <input type="password" id="password" required autocomplete="current-password">
+
+    <button type="submit" class="submit" id="submit-btn">Sign in</button>
+  </form>
+
+  <p class="message" id="message"></p>
+</div>
+
+<script>
+  // Same Supabase project as login.html / landing.html
+  const SUPABASE_URL = "https://ccwqtvdkoamgrkcvuzlg.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjd3F0dmRrb2FtZ3JrY3Z1emxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzYwNzUsImV4cCI6MjA5OTc1MjA3NX0.wzRtoG9UKKNtGGxpytjbfqh3Z14gSJdj7P9HR7LZHt8";
+
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const form = document.getElementById("admin-form");
+  const emailInput = document.getElementById("email");
+  const passwordInput = document.getElementById("password");
+  const submitBtn = document.getElementById("submit-btn");
+  const messageEl = document.getElementById("message");
+
+  function setMessage(text, type) {
+    messageEl.textContent = text || "";
+    messageEl.className = "message" + (type ? " " + type : "");
+  }
+
+  // If an admin is already signed in, skip straight to the admin page
+  async function checkSession() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session && session.user && session.user.app_metadata?.role === "admin") {
+      window.location.href = "admin.html";
+    }
+  }
+  checkSession();
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    submitBtn.disabled = true;
+    setMessage("");
+
+    try {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: emailInput.value.trim(),
+        password: passwordInput.value
+      });
+      if (error) throw error;
+
+      // Check the role stored in app_metadata (set via SQL, not
+      // editable by the user themselves -- see supabase-setup.sql)
+      const isAdmin = data.user?.app_metadata?.role === "admin";
+
+      if (!isAdmin) {
+        await supabaseClient.auth.signOut();
+        setMessage("This account is not authorized as admin.", "error");
+        return;
+      }
+
+      window.location.href = "admin.html";
+    } catch (err) {
+      setMessage(err.message || "Something went wrong.", "error");
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>

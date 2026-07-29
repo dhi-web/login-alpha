@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - Users</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --border: #2a2e37;
+    --text: #eef0f3;
+    --muted: #8a8f9a;
+    --accent: #e0995b;
+    --error: #ef5b5b;
+    --success: #4fbf7f;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .brand {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 20px;
+    padding: 3px 10px;
+  }
+
+  nav { display: flex; gap: 8px; }
+
+  nav a {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+  }
+
+  nav a.active { color: var(--text); border-color: var(--accent); }
+
+  button.logout {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+
+  button.logout:hover { border-color: var(--muted); }
+
+  main {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 48px 24px;
+  }
+
+  #loading {
+    max-width: 780px;
+    margin: 120px auto;
+    text-align: center;
+    color: var(--muted);
+  }
+
+  h1 { font-size: 1.3rem; margin: 0 0 6px; }
+
+  p.subtitle {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0 0 24px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 0.88rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: rgba(255,255,255,0.02);
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  .delete-user-btn {
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    border-radius: 6px;
+    border: 1px solid var(--error);
+    background: transparent;
+    color: var(--error);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .delete-user-btn:hover { background: rgba(239, 91, 91, 0.1); }
+  .delete-user-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .you-tag {
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .empty-msg {
+    color: var(--muted);
+    font-size: 0.9rem;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .message {
+    margin-top: 14px;
+    font-size: 0.85rem;
+  }
+
+  .message.error { color: var(--error); }
+  .message.success { color: var(--success); }
+
+  .reassign-panel {
+    background: rgba(224, 153, 91, 0.08);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 16px;
+    margin-top: 12px;
+    font-size: 0.85rem;
+  }
+
+  .reassign-panel p {
+    margin: 0 0 10px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  .reassign-panel select {
+    width: 100%;
+    padding: 8px 10px;
+    background: #0f1218;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.88rem;
+    margin-bottom: 12px;
+  }
+
+  .reassign-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .reassign-confirm-btn {
+    padding: 7px 14px;
+    background: var(--error);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .reassign-confirm-btn:hover { opacity: 0.9; }
+  .reassign-confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .reassign-cancel-btn {
+    padding: 7px 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+
+  .reassign-cancel-btn:hover { color: var(--text); }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div id="loading">Checking access…</div>
+
+<div id="app" class="hidden">
+  <header>
+    <div class="brand">Your App <span class="badge">Admin</span></div>
+    <nav>
+      <a href="admin.html">Announcement</a>
+      <a href="admin-courses.html">Courses</a>
+      <a href="admin-users.html" class="active">Users</a>
+    </nav>
+    <button class="logout" id="logout-btn">Log out</button>
+  </header>
+
+  <main>
+    <h1>Registered users</h1>
+    <p class="subtitle">All users who have signed up on this website.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Registered</th>
+          <th>Last sign in</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="user-table-body">
+        <tr><td colspan="4" class="empty-msg">Loading…</td></tr>
+      </tbody>
+    </table>
+
+    <p class="message" id="message"></p>
+  </main>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://ccwqtvdkoamgrkcvuzlg.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjd3F0dmRrb2FtZ3JrY3Z1emxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzYwNzUsImV4cCI6MjA5OTc1MjA3NX0.wzRtoG9UKKNtGGxpytjbfqh3Z14gSJdj7P9HR7LZHt8";
+
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const loadingEl = document.getElementById("loading");
+  const appEl = document.getElementById("app");
+  const tableBody = document.getElementById("user-table-body");
+  const messageEl = document.getElementById("message");
+  const logoutBtn = document.getElementById("logout-btn");
+
+  let currentAdminId = null;
+  let usersData = []; // keeps last loaded users so we can build the reassign dropdown
+
+  function setMessage(text, type) {
+    messageEl.textContent = text || "";
+    messageEl.className = "message" + (type ? " " + type : "");
+  }
+
+  function formatDateTime(isoString) {
+    if (!isoString) return "—";
+    const d = new Date(isoString);
+    return d.toLocaleString(undefined, {
+      year: "numeric", month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str || "";
+    return div.innerHTML;
+  }
+
+  async function guardAndLoad() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+
+    if (!session || !session.user) {
+      window.location.href = "admin-login.html";
+      return;
+    }
+
+    if (session.user.app_metadata?.role !== "admin") {
+      await supabaseClient.auth.signOut();
+      window.location.href = "admin-login.html";
+      return;
+    }
+
+    currentAdminId = session.user.id;
+
+    loadingEl.classList.add("hidden");
+    appEl.classList.remove("hidden");
+
+    loadUsers();
+  }
+
+  // Calls the admin_list_users() Postgres function (SECURITY DEFINER,
+  // checks admin role internally) -- this is how we can list auth.users
+  // safely without exposing that protected schema to regular queries.
+  async function loadUsers() {
+    const { data, error } = await supabaseClient.rpc("admin_list_users");
+
+    if (error) {
+      tableBody.innerHTML = `<tr><td colspan="4" class="empty-msg">Failed to load users: ${escapeHtml(error.message)}</td></tr>`;
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="4" class="empty-msg">No registered users yet.</td></tr>';
+      return;
+    }
+
+    usersData = data;
+
+    tableBody.innerHTML = data.map(u => `
+      <tr data-user-row="${u.id}">
+        <td>${escapeHtml(u.email)}</td>
+        <td>${formatDateTime(u.created_at)}</td>
+        <td>${formatDateTime(u.last_sign_in_at)}</td>
+        <td>
+          ${u.id === currentAdminId
+            ? '<span class="you-tag">(you)</span>'
+            : `<button class="delete-user-btn" data-user-id="${u.id}" data-user-email="${escapeHtml(u.email)}">Delete account</button>`
+          }
+        </td>
+      </tr>
+    `).join("");
+  }
+
+  tableBody.addEventListener("click", async (e) => {
+    const deleteBtn = e.target.closest(".delete-user-btn");
+    const cancelReassignBtn = e.target.closest(".reassign-cancel-btn");
+    const confirmReassignBtn = e.target.closest(".reassign-confirm-btn");
+
+    if (deleteBtn) {
+      const userId = deleteBtn.dataset.userId;
+      const userEmail = deleteBtn.dataset.userEmail;
+
+      // Check if this user has created any courses (relevant when
+      // deleting an old admin account, since courses.created_by
+      // references them).
+      const { data: courses, error: coursesError } = await supabaseClient
+        .from("courses")
+        .select("id, name")
+        .eq("created_by", userId);
+
+      if (coursesError) {
+        setMessage("Failed to check courses: " + coursesError.message, "error");
+        return;
+      }
+
+      if (courses && courses.length > 0) {
+        // Show the reassign panel instead of deleting immediately
+        showReassignPanel(userId, userEmail, courses);
+        return;
+      }
+
+      // No courses tied to this account -- proceed with the normal
+      // confirm + delete flow.
+      const confirmed = window.confirm(
+        `Delete the account for ${userEmail}?\n\nThis permanently removes their login AND all their course registrations. This can't be undone.`
+      );
+      if (!confirmed) return;
+
+      await performDelete(userId, userEmail, deleteBtn);
+      return;
+    }
+
+    if (cancelReassignBtn) {
+      const panelRow = cancelReassignBtn.closest("tr");
+      panelRow.remove();
+      return;
+    }
+
+    if (confirmReassignBtn) {
+      const userId = confirmReassignBtn.dataset.userId;
+      const userEmail = confirmReassignBtn.dataset.userEmail;
+      const panelRow = confirmReassignBtn.closest("tr");
+      const select = panelRow.querySelector("select");
+      const newAdminId = select.value;
+
+      if (!newAdminId) {
+        alert("Please choose an admin to hand the courses over to.");
+        return;
+      }
+
+      confirmReassignBtn.disabled = true;
+
+      // 1. Reassign all courses created by the old admin to the new admin
+      const { error: reassignError } = await supabaseClient
+        .from("courses")
+        .update({ created_by: newAdminId })
+        .eq("created_by", userId);
+
+      if (reassignError) {
+        setMessage("Failed to reassign courses: " + reassignError.message, "error");
+        confirmReassignBtn.disabled = false;
+        return;
+      }
+
+      // 2. Now safe to delete the old admin's account
+      panelRow.remove();
+      await performDelete(userId, userEmail, null);
+    }
+  });
+
+  function showReassignPanel(userId, userEmail, courses) {
+    // Remove any existing panel first (only one open at a time)
+    const existingPanel = document.querySelector("tr[data-reassign-panel]");
+    if (existingPanel) existingPanel.remove();
+
+    const otherAdmins = usersData.filter(u => u.role === "admin" && u.id !== userId);
+
+    const courseNames = courses.map(c => escapeHtml(c.name)).join(", ");
+
+    const optionsHtml = otherAdmins.length === 0
+      ? '<option value="">No other admin accounts available</option>'
+      : otherAdmins.map(a => `<option value="${a.id}">${escapeHtml(a.email)}</option>`).join("");
+
+    const panelHtml = `
+      <tr data-reassign-panel>
+        <td colspan="4">
+          <div class="reassign-panel">
+            <p><strong>${escapeHtml(userEmail)}</strong> created ${courses.length} course${courses.length > 1 ? "s" : ""} (${courseNames}). Choose an admin to take over these courses before deleting this account:</p>
+            <select>${optionsHtml}</select>
+            <div class="reassign-actions">
+              <button class="reassign-confirm-btn" data-user-id="${userId}" data-user-email="${escapeHtml(userEmail)}" ${otherAdmins.length === 0 ? "disabled" : ""}>Reassign &amp; Delete</button>
+              <button class="reassign-cancel-btn">Cancel</button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    `;
+
+    const targetRow = document.querySelector(`tr[data-user-row="${userId}"]`);
+    targetRow.insertAdjacentHTML("afterend", panelHtml);
+  }
+
+  async function performDelete(userId, userEmail, btnEl) {
+    if (btnEl) btnEl.disabled = true;
+    setMessage("");
+
+    // Calls the delete-user Edge Function -- the only place that
+    // uses the service_role key, safely on the server side, never in
+    // this HTML file.
+    const { data, error } = await supabaseClient.functions.invoke("delete-user", {
+      body: { user_id: userId }
+    });
+
+    if (error) {
+      setMessage("Failed to delete: " + error.message, "error");
+      if (btnEl) btnEl.disabled = false;
+    } else if (data?.error) {
+      setMessage("Failed to delete: " + data.error, "error");
+      if (btnEl) btnEl.disabled = false;
+    } else {
+      setMessage(`${userEmail} has been deleted.`, "success");
+      loadUsers();
+    }
+  }
+
+  guardAndLoad();
+
+  logoutBtn.addEventListener("click", async () => {
+    await supabaseClient.auth.signOut();
+    window.location.href = "admin-login.html";
+  });
+</script>
+
+</body>
+</html>

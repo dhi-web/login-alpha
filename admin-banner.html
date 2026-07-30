@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - Banner</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --border: #2a2e37;
+    --text: #eef0f3;
+    --muted: #8a8f9a;
+    --accent: #e0995b;
+    --accent-hover: #cf8a4e;
+    --error: #ef5b5b;
+    --success: #4fbf7f;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .brand {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 20px;
+    padding: 3px 10px;
+  }
+
+  nav { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  nav a {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+  }
+
+  nav a.active { color: var(--text); border-color: var(--accent); }
+
+  button.logout {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+
+  button.logout:hover { border-color: var(--muted); }
+
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 48px 24px;
+  }
+
+  #loading {
+    max-width: 640px;
+    margin: 120px auto;
+    text-align: center;
+    color: var(--muted);
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px;
+  }
+
+  h1 { font-size: 1.3rem; margin: 0 0 6px; }
+
+  p.subtitle {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0 0 24px;
+  }
+
+  .preview-box {
+    width: 100%;
+    aspect-ratio: 800 / 400;
+    background: #0f1218;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .preview-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .preview-box .placeholder {
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 20px;
+  }
+
+  input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    background: #0f1218;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.88rem;
+  }
+
+  .hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  button.upload-btn {
+    padding: 11px 20px;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  button.upload-btn:hover { background: var(--accent-hover); }
+  button.upload-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  button.delete-btn {
+    padding: 11px 20px;
+    background: transparent;
+    border: 1px solid var(--error);
+    border-radius: 8px;
+    color: var(--error);
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  button.delete-btn:hover { background: rgba(239, 91, 91, 0.1); }
+  button.delete-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .message {
+    margin-top: 16px;
+    font-size: 0.85rem;
+  }
+
+  .message.error { color: var(--error); }
+  .message.success { color: var(--success); }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div id="loading">Checking access…</div>
+
+<div id="app" class="hidden">
+  <header>
+    <div class="brand">Your App <span class="badge">Admin</span></div>
+    <nav>
+      <a href="admin.html">Announcement</a>
+      <a href="admin-courses.html">Courses</a>
+      <a href="admin-users.html">Users</a>
+      <a href="admin-banner.html" class="active">Banner</a>
+    </nav>
+    <button class="logout" id="logout-btn">Log out</button>
+  </header>
+
+  <main>
+    <div class="card">
+      <h1>Advertisement banner</h1>
+      <p class="subtitle">This image appears on the homepage, next to the login form. Recommended size: 800 × 400px.</p>
+
+      <div class="preview-box" id="preview-box">
+        <div class="placeholder" id="preview-placeholder">No banner uploaded yet.</div>
+        <img id="preview-img" class="hidden" alt="Current banner">
+      </div>
+
+      <input type="file" id="banner-file" accept="image/png, image/jpeg, image/webp">
+      <p class="hint">Accepted: JPG, PNG, or WEBP. Image will be displayed at 800×400px (cropped to fit if a different ratio).</p>
+
+      <div class="actions">
+        <button class="upload-btn" id="upload-btn">Upload / Replace banner</button>
+        <button class="delete-btn" id="delete-btn">Delete banner</button>
+      </div>
+
+      <p class="message" id="message"></p>
+    </div>
+  </main>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://ccwqtvdkoamgrkcvuzlg.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjd3F0dmRrb2FtZ3JrY3Z1emxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzYwNzUsImV4cCI6MjA5OTc1MjA3NX0.wzRtoG9UKKNtGGxpytjbfqh3Z14gSJdj7P9HR7LZHt8";
+
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const BUCKET_NAME = "banners";
+
+  const loadingEl = document.getElementById("loading");
+  const appEl = document.getElementById("app");
+  const previewImg = document.getElementById("preview-img");
+  const previewPlaceholder = document.getElementById("preview-placeholder");
+  const fileInput = document.getElementById("banner-file");
+  const uploadBtn = document.getElementById("upload-btn");
+  const deleteBtn = document.getElementById("delete-btn");
+  const messageEl = document.getElementById("message");
+  const logoutBtn = document.getElementById("logout-btn");
+
+  let currentImagePath = null;
+
+  function setMessage(text, type) {
+    messageEl.textContent = text || "";
+    messageEl.className = "message" + (type ? " " + type : "");
+  }
+
+  function showPreview(imagePath) {
+    if (imagePath) {
+      const { data } = supabaseClient.storage.from(BUCKET_NAME).getPublicUrl(imagePath);
+      previewImg.src = data.publicUrl;
+      previewImg.classList.remove("hidden");
+      previewPlaceholder.classList.add("hidden");
+      deleteBtn.disabled = false;
+    } else {
+      previewImg.classList.add("hidden");
+      previewPlaceholder.classList.remove("hidden");
+      deleteBtn.disabled = true;
+    }
+  }
+
+  async function guardAndLoad() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+
+    if (!session || !session.user) {
+      window.location.href = "admin-login.html";
+      return;
+    }
+
+    if (session.user.app_metadata?.role !== "admin") {
+      await supabaseClient.auth.signOut();
+      window.location.href = "admin-login.html";
+      return;
+    }
+
+    loadingEl.classList.add("hidden");
+    appEl.classList.remove("hidden");
+
+    loadCurrentBanner();
+  }
+
+  async function loadCurrentBanner() {
+    const { data, error } = await supabaseClient
+      .from("site_banner")
+      .select("image_path")
+      .eq("id", 1)
+      .single();
+
+    if (!error && data) {
+      currentImagePath = data.image_path;
+      showPreview(currentImagePath);
+    }
+  }
+
+  uploadBtn.addEventListener("click", async () => {
+    const file = fileInput.files[0];
+    if (!file) {
+      setMessage("Please choose an image file first.", "error");
+      return;
+    }
+
+    uploadBtn.disabled = true;
+    setMessage("");
+
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    // Unique filename each time -- avoids browser image caching issues
+    // and means we don't need to guess/overwrite the previous file name.
+    const ext = file.name.split(".").pop();
+    const newFileName = `banner-${Date.now()}.${ext}`;
+
+    // 1. Upload the new file
+    const { error: uploadError } = await supabaseClient.storage
+      .from(BUCKET_NAME)
+      .upload(newFileName, file, { upsert: false });
+
+    if (uploadError) {
+      setMessage("Upload failed: " + uploadError.message, "error");
+      uploadBtn.disabled = false;
+      return;
+    }
+
+    // 2. Point site_banner at the new file
+    const { error: updateError } = await supabaseClient
+      .from("site_banner")
+      .upsert({
+        id: 1,
+        image_path: newFileName,
+        updated_at: new Date().toISOString(),
+        updated_by: user.id
+      });
+
+    if (updateError) {
+      setMessage("Uploaded, but failed to set as active: " + updateError.message, "error");
+      uploadBtn.disabled = false;
+      return;
+    }
+
+    // 3. Clean up the old file (if any) now that it's no longer referenced
+    const oldPath = currentImagePath;
+    currentImagePath = newFileName;
+    showPreview(newFileName);
+    fileInput.value = "";
+
+    if (oldPath) {
+      await supabaseClient.storage.from(BUCKET_NAME).remove([oldPath]);
+    }
+
+    setMessage("Banner updated.", "success");
+    uploadBtn.disabled = false;
+  });
+
+  deleteBtn.addEventListener("click", async () => {
+    if (!currentImagePath) return;
+
+    const confirmed = window.confirm("Remove the banner? It will no longer show on the homepage.");
+    if (!confirmed) return;
+
+    deleteBtn.disabled = true;
+    setMessage("");
+
+    const pathToRemove = currentImagePath;
+
+    // 1. Clear the reference first
+    const { error: updateError } = await supabaseClient
+      .from("site_banner")
+      .update({ image_path: null, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+
+    if (updateError) {
+      setMessage("Failed to remove banner: " + updateError.message, "error");
+      deleteBtn.disabled = false;
+      return;
+    }
+
+    // 2. Remove the actual file from storage
+    await supabaseClient.storage.from(BUCKET_NAME).remove([pathToRemove]);
+
+    currentImagePath = null;
+    showPreview(null);
+    setMessage("Banner removed.", "success");
+  });
+
+  guardAndLoad();
+
+  logoutBtn.addEventListener("click", async () => {
+    await supabaseClient.auth.signOut();
+    window.location.href = "admin-login.html";
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your App</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --border: #2a2e37;
+    --text: #eef0f3;
+    --muted: #8a8f9a;
+    --accent: #5b8def;
+    --accent-hover: #4a7bdb;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 24px;
+  }
+
+  .layout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    flex-wrap: wrap;
+    max-width: 1300px;
+    width: 100%;
+  }
+
+  .banner-box {
+    width: 800px;
+    max-width: 100%;
+    aspect-ratio: 800 / 400;
+    border-radius: 14px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .banner-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 48px 32px;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--accent);
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #fff;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin: 0 0 8px;
+  }
+
+  p.subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin: 0 0 32px;
+    line-height: 1.5;
+  }
+
+  a.cta {
+    display: inline-block;
+    width: 100%;
+    padding: 12px 0;
+    background: var(--accent);
+    border-radius: 8px;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: background 0.15s;
+  }
+
+  a.cta:hover { background: var(--accent-hover); }
+
+  a.cta.secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    margin-top: 10px;
+  }
+
+  a.cta.secondary:hover { border-color: var(--muted); background: transparent; }
+
+  .hint {
+    margin-top: 16px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <div class="banner-box hidden" id="banner-box">
+    <img id="banner-img" alt="Advertisement banner">
+  </div>
+
+  <div class="card">
+    <div class="logo">A</div>
+    <h1>Welcome</h1>
+    <p class="subtitle">Sign in to your account or create a new one to get started.</p>
+    <a class="cta" id="cta-link" href="login.html">Sign in</a>
+    <a class="cta secondary" id="signup-link" href="login.html?mode=register">Sign up</a>
+    <p class="hint" id="hint"></p>
+    <p class="hint"><a href="admin-login.html" style="color: var(--muted);">Admin login</a></p>
+  </div>
+</div>
+
+<script>
+  // Same project credentials as login.html / landing.html
+  const SUPABASE_URL = "https://ccwqtvdkoamgrkcvuzlg.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjd3F0dmRrb2FtZ3JrY3Z1emxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzYwNzUsImV4cCI6MjA5OTc1MjA3NX0.wzRtoG9UKKNtGGxpytjbfqh3Z14gSJdj7P9HR7LZHt8";
+
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const ctaLink = document.getElementById("cta-link");
+  const signupLink = document.getElementById("signup-link");
+  const hintEl = document.getElementById("hint");
+  const bannerBox = document.getElementById("banner-box");
+  const bannerImg = document.getElementById("banner-img");
+
+  // Fetch and display the current advertisement banner (if admin has
+  // uploaded one). This is a public read -- no login required.
+  async function loadBanner() {
+    const { data, error } = await supabaseClient
+      .from("site_banner")
+      .select("image_path")
+      .eq("id", 1)
+      .single();
+
+    if (!error && data && data.image_path) {
+      const { data: urlData } = supabaseClient.storage
+        .from("banners")
+        .getPublicUrl(data.image_path);
+      bannerImg.src = urlData.publicUrl;
+      bannerBox.classList.remove("hidden");
+    }
+  }
+  loadBanner();
+
+  // If the visitor is already signed in, send them straight to the
+  // landing page instead of making them click through login again.
+  async function checkSession() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session && session.user) {
+      ctaLink.href = "landing.html";
+      ctaLink.textContent = "Go to dashboard";
+      signupLink.style.display = "none";
+      hintEl.textContent = "Signed in as " + session.user.email;
+    }
+  }
+  checkSession();
+</script>
+
+</body>
+</html>
